@@ -1,0 +1,24 @@
+syntax = "v1"
+
+info (
+	title:   "InterviewAPP Chat API"
+	author:  "ilotus"
+	version: "1.0"
+)
+
+type InterViewAPPChatReq {
+	Message string `form:"message"`
+	ChatId  string `form:"chatId"`
+}
+
+type ChatResponse {
+	Content string `json:"content"`
+	IsLast  bool   `json:"isLast"`
+}
+
+service chat {
+	@doc "SSE流式接口"
+	@handler Chat
+	get /interview_app/chat/sse (InterViewAPPChatReq)
+}
+
