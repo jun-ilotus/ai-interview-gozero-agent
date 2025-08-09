@@ -17,8 +17,6 @@ func ChatHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 		// 设置SSE响应头
 		setSSEHeader(w)
 		flusher, _ := w.(http.Flusher)
-		// 立即刷新头部
-		flusher.Flush()
 
 		// 处理请求
 		var req types.InterViewAPPChatReq
@@ -45,13 +43,20 @@ func ChatHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 				return
 			case resp, ok := <-respChan:
 				if !ok {
-					fmt.Fprint(w, "event: end\ndata: {}\n\n") // 结束标记
+					_, err := fmt.Fprint(w, "event: end\ndata: {}\n\n")
+					if err != nil {
+						return
+					}
+					// 结束标记
 					flusher.Flush()
 					return
 				}
 
 				// 直接输出内容，不加JSON包装
-				fmt.Fprintf(w, "data: %s\n\n", resp.Content)
+				_, err := fmt.Fprintf(w, "data: %s\n\n", resp.Content)
+				if err != nil {
+					return
+				}
 				flusher.Flush()
 
 				if resp.IsLast {

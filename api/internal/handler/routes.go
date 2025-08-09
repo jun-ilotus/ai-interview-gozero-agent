@@ -16,8 +16,8 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		[]rest.Route{
 			{
 				// SSE流式接口
-				Method:  http.MethodGet,
-				Path:    "/interview_app/chat/sse",
+				Method:  http.MethodPost,
+				Path:    "/api/ai/interview_app/chat/sse",
 				Handler: ChatHandler(serverCtx),
 			},
 		},

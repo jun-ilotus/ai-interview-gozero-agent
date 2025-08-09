@@ -19,6 +19,6 @@ type ChatResponse {
 service chat {
 	@doc "SSE流式接口"
 	@handler Chat
-	get /interview_app/chat/sse (InterViewAPPChatReq)
+	post /interview_app/chat/sse (InterViewAPPChatReq)
 }
 
