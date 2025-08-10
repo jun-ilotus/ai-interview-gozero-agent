@@ -51,11 +51,15 @@ func (l *ChatLogic) Chat(req *types.InterViewAPPChatReq) (<-chan *types.ChatResp
 
 		// 3.创建OpenAI请求
 		request := openai.ChatCompletionRequest{
-			Model:       l.svcCtx.Config.OpenAI.Model,
-			Messages:    message, // 使用会话历史
-			Stream:      true,
-			MaxTokens:   l.svcCtx.Config.OpenAI.MaxTokens,
-			Temperature: l.svcCtx.Config.OpenAI.Temperature,
+			Model:            l.svcCtx.Config.OpenAI.Model,
+			Messages:         message, // 使用会话历史
+			Stream:           true,
+			MaxTokens:        l.svcCtx.Config.OpenAI.MaxTokens,
+			Temperature:      l.svcCtx.Config.OpenAI.Temperature,
+			TopP:             l.svcCtx.Config.OpenAI.TopP,
+			FrequencyPenalty: l.svcCtx.Config.OpenAI.FrequencyPenalty,
+			PresencePenalty:  l.svcCtx.Config.OpenAI.PresencePenalty,
+			Seed:             l.svcCtx.Config.OpenAI.Seed,
 		}
 
 		// 4.创建流式响应

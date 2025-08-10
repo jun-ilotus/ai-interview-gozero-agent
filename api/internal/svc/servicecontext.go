@@ -2,7 +2,9 @@ package svc
 
 import (
 	"ai-gozero-agent/api/internal/config"
+	"fmt"
 	"github.com/sashabaranov/go-openai"
+	"github.com/unidoc/unipdf/v3/common/license"
 	"log"
 )
 
@@ -16,7 +18,12 @@ type ServiceContext struct {
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	// 创建OpenAI客户端
-	openaiConf := openai.DefaultConfig(c.OpenAI.ApiKey)
+	//openaiConf := openai.DefaultConfig(c.OpenAI.ApiKey)
+	//openaiConf.BaseURL = c.OpenAI.BaseURL
+	//openAIClient := openai.NewClientWithConfig(openaiConf)
+
+	// ollama
+	openaiConf := openai.DefaultConfig("")
 	openaiConf.BaseURL = c.OpenAI.BaseURL
 	openAIClient := openai.NewClientWithConfig(openaiConf)
 
@@ -32,6 +39,11 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	} else {
 		log.Println("TestConnection success")
 	}
+
+	err = license.SetMeteredKey(c.UniPDFLicense)
+	if err != nil {
+		fmt.Printf("SetMeteredKey err: %v", err)
+	} // 如果没有授权，unipdf会添加水印
 
 	return &ServiceContext{
 		Config:       c,

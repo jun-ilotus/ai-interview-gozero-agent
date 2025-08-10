@@ -3,19 +3,40 @@ Host: 0.0.0.0
 Port: 8123
 Timeout: 0  # 禁用超时
 
+#OpenAI:
+#  ApiKey: "*******"
+#  BaseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+#  Model: "qwen-plus"
+#  MaxTokens: 2048   #最大token数
+#  Temperature: 0.7   #温度参数
+
 OpenAI:
-  ApiKey: "**********************"
-  BaseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-  Model: "qwen-plus"
-  MaxTokens: 2048   #最大token数
-  Temperature: 0.7   #温度参数
+  ApiKey: ""
+  BaseURL: "http://localhost:11434/v1"  #ollama默认地址
+  Model: "deepseek-r1:7b"
+  EmbeddingModel: "nomic-embed-text"
+
+  # 核心生成参数
+  MaxTokens: 2048
+  Temperature: 0.7  # (0-2)
+  TopP: 0.9 # 核心采样参数 (0-1)
+  FrequencyPenalty: 0  # 频率惩罚 （-2.0到2.0）
+  PresencePenalty: 0  # 存在惩罚（-2.0到2.0）
+
+  # 高级控制参数
+  # StopSequences: ["\n", "###"]  # 停止生成序列
+
+  # 调试参数
+  Seed: -1  # 随机种子（-1=随机）
 
 VectorDB:
   Host: "127.0.0.1"
   Port: 5432
   DBName: "dayu_ai_agent"
   User: "root"
-  Password: "***********"
+  Password: "*******"
   Table: "vector_store"
   MaxConn: 20
-  EmbeddingModel: "text-embedding-v1"
+  EmbeddingModel: "nomic-embed-text"
+
+UniPDFLicense: "*********"
