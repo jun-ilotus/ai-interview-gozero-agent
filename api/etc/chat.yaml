@@ -4,8 +4,18 @@ Port: 8123
 Timeout: 0  # 禁用超时
 
 OpenAI:
-  ApiKey: "*************"
+  ApiKey: "**********************"
   BaseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1"
   Model: "qwen-plus"
   MaxTokens: 2048   #最大token数
   Temperature: 0.7   #温度参数
+
+VectorDB:
+  Host: "127.0.0.1"
+  Port: 5432
+  DBName: "dayu_ai_agent"
+  User: "root"
+  Password: "***********"
+  Table: "vector_store"
+  MaxConn: 20
+  EmbeddingModel: "text-embedding-v1"

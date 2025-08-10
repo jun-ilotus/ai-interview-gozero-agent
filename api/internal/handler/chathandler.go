@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"ai-gozero-agent/api/internal/logic"
 	"ai-gozero-agent/api/internal/svc"
@@ -51,9 +52,11 @@ func ChatHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 					flusher.Flush()
 					return
 				}
-
+				// 加个处理符合前端markdown格式
+				safeContent := strings.ReplaceAll(resp.Content, "\n", "\\n")
+				safeContent = strings.ReplaceAll(safeContent, "\r", "\\r")
 				// 直接输出内容，不加JSON包装
-				_, err := fmt.Fprintf(w, "data: %s\n\n", resp.Content)
+				_, err := fmt.Fprintf(w, "data: %s\n\n", safeContent)
 				if err != nil {
 					return
 				}
