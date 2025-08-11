@@ -3,6 +3,7 @@ package svc
 import (
 	"ai-gozero-agent/api/internal/config"
 	"ai-gozero-agent/api/internal/types"
+	"ai-gozero-agent/api/internal/utils"
 	"context"
 	"encoding/json"
 	"errors"
@@ -56,13 +57,13 @@ func (vs *VectorStore) SaveMessage(chatId, role, content string) error {
 		return fmt.Errorf("marshal embedding: %w", err)
 	}
 
-	sql := `INSERT INTO vector_store (chat_id, role, content, embedding) VALUES ($1, $2, $3, $4)`
+	sql := `INSERT INTO vector_store (chat_id, role, content, embedding, source_type) VALUES ($1, $2, $3, $4, 'message')`
 	_, err = vs.Pool.Exec(context.Background(), sql, chatId, role, content, embeddingJson)
 
 	return err
 }
 
-// 获取会话历史消息
+// GetMessages 获取会话历史消息
 func (vs *VectorStore) GetMessages(chatId string, limit int) ([]types.VectorMessage, error) {
 	// 查询数据库
 	sql := `SELECT role, content FROM vector_store WHERE chat_id = $1 ORDER BY created_at DESC LIMIT $2`
@@ -89,6 +90,68 @@ func (vs *VectorStore) GetMessages(chatId string, limit int) ([]types.VectorMess
 		messages[i], messages[j] = messages[j], messages[i]
 	}
 	return messages, nil
+}
+
+func (vs *VectorStore) SaveKnowledge(title, content string, cfg config.VectorDBConfig) error {
+	fmt.Println("进入保存处理！！：", cfg.Knowledge.MaxChunkSize)
+	// 分块处理知识内容 todo
+	chunks := utils.SplitText(content, cfg.Knowledge.MaxChunkSize)
+	fmt.Println("分块处理内容！！：")
+	for _, chunk := range chunks {
+		fmt.Println("循环插入中！！：")
+		embedding, err := vs.generateEmbedding(chunk)
+		if err != nil {
+			return fmt.Errorf("generateEmbedding error: %w", err)
+		}
+
+		embeddingJson, err := json.Marshal(embedding)
+		if err != nil {
+			return fmt.Errorf("marshal embedding: %w", err)
+		}
+
+		sql := `INSERT INTO knowledge_base (title, content, embedding) VALUES ($1, $2, $3)`
+		_, err = vs.Pool.Exec(context.Background(), sql, title, chunk, embeddingJson)
+		if err != nil {
+			return fmt.Errorf("DB Insert Knowledge: %w", err)
+		}
+		fmt.Println("插入成功！！：")
+	}
+	return nil
+}
+
+func (vs *VectorStore) RetrieveKnowledge(query string, topK int) ([]types.KnowledgeChunk, error) {
+	queryEmbedding, err := vs.generateEmbedding(query)
+	if err != nil {
+		return nil, fmt.Errorf("generateEmbedding: %w", err)
+	}
+
+	queryEmbeddingJson, err := json.Marshal(queryEmbedding)
+	if err != nil {
+		return nil, fmt.Errorf("marshal embedding: %w", err)
+	}
+
+	// 使用余弦相似度检索
+	sql := `SELECT id, title, content FROM knowledge_base ORDER BY embedding::jsonb::text <-> $1::text LIMIT $2`
+	rows, err := vs.Pool.Query(context.Background(), sql, queryEmbeddingJson, topK)
+	if err != nil {
+		return nil, fmt.Errorf("DB Select Knowledge: %w", err)
+	}
+	defer rows.Close()
+
+	var results []types.KnowledgeChunk
+	for rows.Next() {
+		var id int64
+		var title, content string
+		if err := rows.Scan(&id, &title, &content); err != nil {
+			return nil, fmt.Errorf("DB Select Knowledge: %w", err)
+		}
+		results = append(results, types.KnowledgeChunk{
+			ID:      id,
+			Title:   title,
+			Content: content,
+		})
+	}
+	return results, nil
 }
 
 // 生成向量文本

@@ -32,4 +32,11 @@ type VectorDBConfig struct {
 	Table          string
 	MaxConn        int
 	EmbeddingModel string
+	Knowledge      Knowledge
+}
+
+type Knowledge struct {
+	MaxChunkSize     int
+	TopK             int
+	MaxContextLength int
 }

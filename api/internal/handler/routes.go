@@ -15,6 +15,12 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
+				// 知识库上传
+				Method:  http.MethodPost,
+				Path:    "/api/ai/knowledge/upload",
+				Handler: KnowledgeUploadHandler(serverCtx),
+			},
+			{
 				// SSE流式接口
 				Method:  http.MethodPost,
 				Path:    "/api/ai/interview_app/chat/sse",

@@ -16,9 +16,23 @@ type ChatResponse {
 	IsLast  bool   `json:"isLast"`
 }
 
+type KnowledgeUploadReq {
+	Title   string `form:"title"` // 知识标题
+	Content string `form:"content"` // 知识内容
+}
+
+type KnowledgeUploadResp {
+	Msg    string `json:"msg"`
+	Chunks int    `json:"chunks"` // 保存知识块数量
+}
+
 service chat {
 	@doc "SSE流式接口"
 	@handler Chat
 	post /interview_app/chat/sse (InterViewAPPChatReq)
+
+	@doc "知识库上传"
+	@handler KnowledgeUpload
+	post /api/ai/knowledge/upload (KnowledgeUploadReq) returns (KnowledgeUploadResp)
 }
 

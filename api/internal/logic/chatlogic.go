@@ -1,8 +1,10 @@
 package logic
 
 import (
+	"ai-gozero-agent/api/internal/utils"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 
@@ -39,8 +41,15 @@ func (l *ChatLogic) Chat(req *types.InterViewAPPChatReq) (<-chan *types.ChatResp
 			// 不返回，继续处理会话
 		}
 
+		// 知识检索（RAG核心）
+		knowledge, err := l.svcCtx.VectorStore.RetrieveKnowledge(req.Message, 3)
+		if err != nil {
+			l.Logger.Errorf("retrieve knowledge failed: %v", err)
+			knowledge = []types.KnowledgeChunk{}
+		}
+
 		// 2.获取会话历史
-		message, err := l.getSessionHistory(req.ChatId)
+		message, err := l.getSessionHistory(req.ChatId, knowledge)
 		if err != nil {
 			l.Logger.Errorf("get session history failed: %v", err)
 			ch <- &types.ChatResponse{
@@ -111,21 +120,32 @@ func (l *ChatLogic) Chat(req *types.InterViewAPPChatReq) (<-chan *types.ChatResp
 }
 
 // 获取会话历史
-func (l *ChatLogic) getSessionHistory(chatId string) ([]openai.ChatCompletionMessage, error) {
+func (l *ChatLogic) getSessionHistory(chatId string, knowledge []types.KnowledgeChunk) ([]openai.ChatCompletionMessage, error) {
 	// 获得最近的10条消息（约5轮对话）
 	vectorMessage, err := l.svcCtx.VectorStore.GetMessages(chatId, 10)
 	if err != nil {
 		return nil, err
 	}
 
-	// 转换为OpenAI消息格式
-	messages := make([]openai.ChatCompletionMessage, 0, len(vectorMessage)+1)
+	// 构建系统消息 - 注入知识
+	systemMessage := "你是一个专业的goGo语言面试言，负责评估候选人的Go语言能力。请提出有深度的问题并评估回答。"
+	if len(knowledge) > 0 {
+		systemMessage += "\n\n相关背景知识："
+		for i, k := range knowledge {
+			// 限制知识片段长度
+			truncateContent := utils.TruncateText(k.Content, 500)
+			systemMessage += fmt.Sprintf("\n[知识片段%d] %s：%s", i+1, k.Title, truncateContent)
+		}
+	}
+	fmt.Println("检索的数据", systemMessage)
 
-	// 添加系统消息
-	messages = append(messages, openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleSystem,
-		Content: "你是一个专业的Go语言面试言，负责评估候选人的Go语言能力。请提出有深度的问题并评估回答。",
-	})
+	// 转换为OpenAI消息格式
+	messages := []openai.ChatCompletionMessage{
+		{
+			Role:    openai.ChatMessageRoleSystem,
+			Content: systemMessage,
+		},
+	}
 
 	// 添加历史消息
 	for _, msg := range vectorMessage {

@@ -12,3 +12,13 @@ type InterViewAPPChatReq struct {
 	Message string `form:"message"`
 	ChatId  string `form:"chatId"`
 }
+
+type KnowledgeUploadReq struct {
+	Title   string `form:"title"`   // 知识标题
+	Content string `form:"content"` // 知识内容
+}
+
+type KnowledgeUploadResp struct {
+	Msg    string `json:"msg"`
+	Chunks int    `json:"chunks"` // 保存知识块数量
+}
