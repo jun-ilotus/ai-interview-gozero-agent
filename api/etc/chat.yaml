@@ -34,7 +34,7 @@ VectorDB:
   Port: 5432
   DBName: "dayu_ai_agent"
   User: "root"
-  Password: "***********"
+  Password: "******"
   Table: "vector_store"
   MaxConn: 20
   EmbeddingModel: "nomic-embed-text"
@@ -43,4 +43,7 @@ VectorDB:
     TopK: 3  # 检索返回的知识片段数量
     MaxContextLength: 500  # 注入上下文的截断长度
 
-UniPDFLicense: "**********"
+UniPDFLicense: "******"
+
+MCP:
+  Endpoint: 127.0.0.1:8080
