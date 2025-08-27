@@ -40,6 +40,13 @@ func (l *ChatLogic) Chat(req *types.InterViewAPPChatReq) (<-chan *types.ChatResp
 			l.Logger.Errorf("save message failed: %v", err)
 			// 不返回，继续处理会话
 		}
+		stateManager := NewStateManager(l.svcCtx)
+		// 获取当前状态
+		currentState, err := stateManager.GetOrInitState(req.ChatId)
+		if err != nil {
+			l.Logger.Errorf("get current state failed: %v", err)
+			currentState = types.StateStart
+		}
 
 		// 知识检索（RAG核心）
 		knowledge, err := l.svcCtx.VectorStore.RetrieveKnowledge(req.Message, 3)
@@ -48,8 +55,8 @@ func (l *ChatLogic) Chat(req *types.InterViewAPPChatReq) (<-chan *types.ChatResp
 			knowledge = []types.KnowledgeChunk{}
 		}
 
-		// 2.获取会话历史
-		message, err := l.getSessionHistory(req.ChatId, knowledge)
+		// 2.获取会话历史，构建带状态系统消息
+		message, err := l.buildMessageWithState(req.ChatId, currentState, knowledge)
 		if err != nil {
 			l.Logger.Errorf("get session history failed: %v", err)
 			ch <- &types.ChatResponse{
@@ -75,6 +82,7 @@ func (l *ChatLogic) Chat(req *types.InterViewAPPChatReq) (<-chan *types.ChatResp
 		stream, err := l.svcCtx.OpenAIClient.CreateChatCompletionStream(l.ctx, request)
 		if err != nil {
 			l.Logger.Error(err)
+			ch <- &types.ChatResponse{Content: "系统错误：无法连接AI服务", IsLast: true}
 			return
 		}
 		defer stream.Close()
@@ -87,12 +95,22 @@ func (l *ChatLogic) Chat(req *types.InterViewAPPChatReq) (<-chan *types.ChatResp
 				return
 			default:
 				response, err := stream.Recv()
-				if errors.Is(err, io.EOF) { // 流结束
+				if errors.Is(err, io.EOF) { // 流结束后处理状态更新
+					finalResponse := fullResponse.String()
 					// 流结束后保存会话
-					if fullResponse.String() != "" {
+					if finalResponse != "" {
+						// 保存AI回复
 						if saveErr := l.svcCtx.VectorStore.SaveMessage(
 							req.ChatId, openai.ChatMessageRoleAssistant, fullResponse.String()); saveErr != nil {
 							l.Logger.Errorf("save message failed: %v", saveErr)
+						}
+
+						// 更新状态
+						newState, err := stateManager.EvaluateAndUpdateState(req.ChatId, finalResponse)
+						if err != nil {
+							l.Logger.Errorf("evaluate and update state failed: %v", err)
+						} else {
+							l.Logger.Infof("evaluate and update state: %v", newState)
 						}
 					}
 					// 发送结束标记
@@ -155,5 +173,54 @@ func (l *ChatLogic) getSessionHistory(chatId string, knowledge []types.Knowledge
 		})
 	}
 
+	return messages, nil
+}
+
+// buildMessageWithState 构建带状态的消息
+func (l *ChatLogic) buildMessageWithState(chatId, currentState string, knowledge []types.KnowledgeChunk) ([]openai.ChatCompletionMessage, error) {
+	// 构建状态待定的系统消息
+	systemMessage := "你是一个专业的Go语言面试官，负责评估候选人的Go语言能力"
+	systemMessage += "\n\n当前状态：" + currentState
+
+	switch currentState {
+	case types.StateStart:
+		systemMessage += "\n目标：欢迎候选人并开始面试流程"
+	case types.StateQuestion:
+		systemMessage += "\n目标：提出有深度的问题考察Go语言核心概念"
+	case types.StateFollowUp:
+		systemMessage += "\n目标：基于候选人的回答进行追问，深入考察理解深度"
+	case types.StateEvaluate:
+		systemMessage += "\n目标：全面评估候选人的技术能力"
+	case types.StateEnd:
+		systemMessage += "\n目标：结束面试并提供反馈"
+	}
+
+	// 注入知识
+	if len(knowledge) > 0 {
+		systemMessage += "\n\n相关背景知识："
+		for i, k := range knowledge {
+			// 限制知识片段长度
+			truncateContent := utils.TruncateText(k.Content, 500)
+			systemMessage += fmt.Sprintf("\n[知识片段%d] %s：%s", i+1, k.Title, truncateContent)
+		}
+	}
+
+	messages := []openai.ChatCompletionMessage{
+		{
+			Role:    openai.ChatMessageRoleSystem,
+			Content: systemMessage,
+		},
+	}
+
+	history, err := l.svcCtx.VectorStore.GetMessages(chatId, 10)
+	if err != nil {
+		return nil, err
+	}
+	for _, msg := range history {
+		messages = append(messages, openai.ChatCompletionMessage{
+			Role:    msg.Role,
+			Content: msg.Content,
+		})
+	}
 	return messages, nil
 }

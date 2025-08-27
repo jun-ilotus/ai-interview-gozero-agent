@@ -4,6 +4,7 @@ go 1.24.1
 
 require (
 	github.com/jackc/pgx/v5 v5.7.4
+	github.com/redis/go-redis/v9 v9.11.0
 	github.com/sashabaranov/go-openai v1.40.5
 	github.com/unidoc/unipdf/v3 v3.69.0
 	github.com/zeromicro/go-zero v1.8.5
@@ -57,7 +58,6 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/redis/go-redis/v9 v9.11.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/stretchr/testify v1.10.0 // indirect

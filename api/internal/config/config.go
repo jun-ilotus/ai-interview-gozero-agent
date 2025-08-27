@@ -23,6 +23,7 @@ type Config struct {
 	MCP           struct {
 		Endpoint string
 	}
+	Redis Redis
 }
 
 // VectorDBConfig 向量数据库配置
@@ -42,4 +43,11 @@ type Knowledge struct {
 	MaxChunkSize     int
 	TopK             int
 	MaxContextLength int
+}
+
+type Redis struct {
+	Host     string
+	Port     int
+	Password string
+	DB       int
 }

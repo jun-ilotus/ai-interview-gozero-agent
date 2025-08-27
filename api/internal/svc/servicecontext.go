@@ -2,7 +2,9 @@ package svc
 
 import (
 	"ai-gozero-agent/api/internal/config"
+	"context"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"github.com/sashabaranov/go-openai"
 	"github.com/unidoc/unipdf/v3/common/license"
 	"log"
@@ -15,6 +17,7 @@ type ServiceContext struct {
 	//SessionStore types.SessionStore // 会话存储
 	VectorStore *VectorStore
 	PdfClient   *PdfClient
+	Redis       *redis.Client
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -46,11 +49,26 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		fmt.Printf("SetMeteredKey err: %v", err)
 	} // 如果没有授权，unipdf会添加水印
 
+	// 初始化Redis
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", c.Redis.Host, c.Redis.Port),
+		Password: c.Redis.Password,
+		DB:       c.Redis.DB,
+	})
+
+	// 测试Redis连接
+	if _, err := rdb.Ping(context.Background()).Result(); err != nil {
+		log.Fatalf("rdb.Ping err: %v", err)
+	} else {
+		log.Println("rdb.Ping success")
+	}
+
 	return &ServiceContext{
 		Config:       c,
 		OpenAIClient: openAIClient,
 		//SessionStore: NewMemorySessionStore(), // 内存会话存储
 		VectorStore: vectorStore,
 		PdfClient:   NewPdfClient(c.MCP.Endpoint),
+		Redis:       rdb,
 	}
 }
